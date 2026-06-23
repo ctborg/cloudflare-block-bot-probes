@@ -1,0 +1,80 @@
+# Cloudflare Worker Bot Blocking Rules
+#
+# Sadly Cloudflare does not deploy WAF custom rules from wrangler.toml.
+# Apply these expressions in Cloudflare WAF Custom Rules, Terraform, or the
+# Cloudflare Rulesets API.
+
+[[rules]]
+name = "Block WordPress and PHP scanners"
+action = "block"
+description = "Blocks common WordPress, XML-RPC, wlwmanifest, and arbitrary PHP probes."
+expression = '''
+(
+  lower(http.request.uri.path) contains "/wp-"
+  or lower(http.request.uri.path) contains "/wordpress/"
+  or lower(http.request.uri.path) contains "/xmlrpc.php"
+  or lower(http.request.uri.path) contains "/wlwmanifest.xml"
+  or ends_with(lower(http.request.uri.path), ".php")
+  or lower(http.request.uri.path) contains ".php/"
+)
+'''
+
+[[rules]]
+name = "Block dotfiles and local tooling"
+action = "block"
+description = "Blocks probes for Git, env files, editor config, and local project metadata."
+expression = '''
+(
+  starts_with(lower(http.request.uri.path), "/.git")
+  or starts_with(lower(http.request.uri.path), "/.env")
+  or starts_with(lower(http.request.uri.path), "/.svn")
+  or starts_with(lower(http.request.uri.path), "/.hg")
+  or starts_with(lower(http.request.uri.path), "/.vscode")
+  or starts_with(lower(http.request.uri.path), "/.idea")
+  or lower(http.request.uri.path) contains "/.env"
+  or lower(http.request.uri.path) contains "/.git/"
+)
+'''
+
+[[rules]]
+name = "Block secrets and config file probes"
+action = "block"
+description = "Blocks probes for credentials, service accounts, application settings, and database config."
+expression = '''
+(
+  http.request.uri.path wildcard "*/credentials.json"
+  or http.request.uri.path wildcard "*/secrets.json"
+  or http.request.uri.path wildcard "*/service-account.json"
+  or http.request.uri.path wildcard "*/firebase.json"
+  or http.request.uri.path wildcard "*/gcp-credentials.json"
+  or http.request.uri.path wildcard "*/google-credentials.json"
+  or http.request.uri.path wildcard "*/keyfile.json"
+  or http.request.uri.path wildcard "*/appsettings*.json"
+  or http.request.uri.path wildcard "*/config*.json"
+  or http.request.uri.path wildcard "*/settings*.json"
+  or http.request.uri.path wildcard "*/database.yml"
+  or http.request.uri.path wildcard "*/database.yaml"
+  or http.request.uri.path wildcard "*/parameters.yml"
+  or http.request.uri.path wildcard "*/application*.properties"
+  or lower(http.request.uri.path) contains "/api/env"
+  or lower(http.request.uri.path) contains "/config/"
+)
+'''
+
+[[rules]]
+name = "Block framework and hosting panel scanners"
+action = "block"
+description = "Blocks common PHPUnit, cPanel, CGI, router, Swagger, Actuator, ASP, and JSP probes."
+expression = '''
+(
+  lower(http.request.uri.path) contains "/vendor/phpunit/"
+  or lower(http.request.uri.path) contains "/cgi-bin/"
+  or lower(http.request.uri.path) contains "/boaform/"
+  or lower(http.request.uri.path) contains "/actuator"
+  or lower(http.request.uri.path) contains "/swagger"
+  or lower(http.request.uri.path) contains "/openid_connect/cpanelid"
+  or ends_with(lower(http.request.uri.path), ".aspx")
+  or ends_with(lower(http.request.uri.path), ".asp")
+  or ends_with(lower(http.request.uri.path), ".jsp")
+)
+'''
